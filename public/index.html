@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ค้นหาร้านค้าใกล้คุณ</title>
+</head>
+<body>
+  <h1>ร้านค้าใกล้คุณ</h1>
+
+  <label for="type">เลือกประเภทร้าน:</label>
+  <select id="type">
+    <option value="">ทั้งหมด</option>
+    <option value="restaurant">ร้านอาหาร</option>
+    <option value="cafe">คาเฟ่</option>
+    <option value="shop">ร้านค้า</option>
+    <!-- ✅ เพิ่ม option อื่นๆ ตาม field type ที่มีใน Database -->
+  </select>
+
+  <ul id="shop-list"></ul>
+
+  <script>
+    async function fetchShops(type = '') {
+      return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(async position => {
+          const { latitude, longitude } = position.coords;
+
+          const res = await fetch('http://localhost:3000/nearby', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ latitude, longitude, type })
+          });
+
+          const shops = await res.json();
+          resolve(shops);
+        }, reject);
+      });
+    }
+
+    function renderShops(shops) {
+      const ul = document.getElementById('shop-list');
+      ul.innerHTML = ''; // เคลียร์ list เดิม
+
+      if (shops.length === 0) {
+        ul.innerHTML = '<li>ไม่พบร้านค้า</li>';
+        return;
+      }
+
+      shops.forEach(shop => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <strong>${shop.name}</strong> - ${shop.distance} km 
+          (<a href="https://www.google.com/maps/search/?api=1&query=${shop.latitude},${shop.longitude}" target="_blank">ดูบน Google Maps</a>)
+        `;
+        ul.appendChild(li);
+      });
+    }
+
+    // โหลดครั้งแรก (ทั้งหมด)
+    fetchShops().then(renderShops);
+
+    // โหลดใหม่เมื่อเลือก type
+    document.getElementById('type').addEventListener('change', async e => {
+      const type = e.target.value;
+      const shops = await fetchShops(type);
+      renderShops(shops);
+    });
+  </script>
+</body>
+</html>
